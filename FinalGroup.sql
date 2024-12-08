@@ -1,16 +1,17 @@
-
+-- drop database hospitals;
+-- create database hospitals;
 USE Hospitals;
 
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS Patients;
 SET FOREIGN_KEY_CHECKS = 1;
-
 CREATE TABLE Patients (
    PID  VARCHAR(25) PRIMARY KEY,
    Name VARCHAR(25),
    DayOfBirth DATE, 
    Sex ENUM('Male', 'Female'),
-   Password VARCHAR(255)
+   Password VARCHAR(255),
+   CHECK (PID LIKE 'P%')
 );
 
 SET FOREIGN_KEY_CHECKS = 0;
@@ -18,86 +19,93 @@ DROP TABLE IF EXISTS Departments;
 SET FOREIGN_KEY_CHECKS = 1;
 
 CREATE TABLE IF NOT EXISTS Departments (
-    Dept_ID INT PRIMARY KEY,
-    NAME VARCHAR(100) NOT NULL,
-    FLOOR INT NOT NULL
+    Dept_ID VARCHAR(4) PRIMARY KEY CHECK (Dept_ID LIKE 'D%'),
+    NAME VARCHAR(100) NOT NULL
     );
 
-# Create the class table
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS Employees;
 SET FOREIGN_KEY_CHECKS = 1;
 
 CREATE TABLE Employees (
-    EID INT PRIMARY KEY,
+    EID VARCHAR(4) PRIMARY KEY CHECK (EID LIKE 'E%'),
     Name VARCHAR(255),
     Sex VARCHAR(50),
-    EmpType VARCHAR(50),
+    EmpType ENUM('Doctor','Nurse'),
     Phone VARCHAR(15),
-    Dept_ID INT,
+    Dept_ID VARCHAR(4),
     Password VARCHAR(255),
     FOREIGN KEY (Dept_ID) REFERENCES Departments(Dept_ID)
 );
-
-
-
-
-SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS Appointments;
-SET FOREIGN_KEY_CHECKS = 1;
-
-CREATE TABLE Appointments (
-    Apt_ID INT PRIMARY KEY,
-    Start DATE,
-    End DATE,
-    Type VARCHAR(50),
-    PID VARCHAR(25),
-    EID INT,
-    FOREIGN KEY (PID) REFERENCES Patients(PID) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (EID) REFERENCES Employees(EID)
-);
-
 
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS Services;
 SET FOREIGN_KEY_CHECKS = 1;
 
 CREATE TABLE Services (
-    Service_ID INT PRIMARY KEY,
+    Service_ID VARCHAR(4) PRIMARY KEY,
     Service_Name VARCHAR(255), -- but need to have several selections
-    Cost DECIMAL(10,2)
+    Cost DECIMAL(10,0),
+    Type ENUM('Passive', 'Active') NOT NULL,
+	CHECK (Service_ID LIKE 'S%')
 );
+
+
+
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS Services_Availed;
+SET FOREIGN_KEY_CHECKS = 1;
+
+CREATE TABLE Services_Availed (
+    Start DATETIME,
+    End DATETIME,
+    PID VARCHAR(4) NOT NULL,
+    EID VARCHAR(4), -- if the service type is passive, then it does not need a EID.
+    Service_ID VARCHAR(4), 
+    FOREIGN KEY (PID) REFERENCES Patients(PID) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (EID) REFERENCES Employees(EID),
+	FOREIGN KEY (Service_ID) REFERENCES Services(Service_ID),
+	PRIMARY KEY (PID, Service_ID,Start)
+
+);
+
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS Employ_Serv;
+SET FOREIGN_KEY_CHECKS = 1;
+CREATE TABLE Employ_Serv (
+    EID VARCHAR(4), -- if the service type is passive, then it does not need a EID.
+    Service_ID VARCHAR(4), 
+    FOREIGN KEY (EID) REFERENCES Employees(EID),
+	FOREIGN KEY (Service_ID) REFERENCES Services(Service_ID),
+	PRIMARY KEY (EID, Service_ID)
+
+);
+
+
 
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS Service_Appointment;
 SET FOREIGN_KEY_CHECKS = 1;
 
-CREATE TABLE Service_Appointment (
-    Service_ID INT,
-    Apt_ID INT,
-    PRIMARY KEY (Service_ID, Apt_ID),
-    FOREIGN KEY (Service_ID) REFERENCES Services(Service_ID),
-    FOREIGN KEY (Apt_ID) REFERENCES Appointments(Apt_ID)
-);
-
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS Beds;
 SET FOREIGN_KEY_CHECKS = 1;
 CREATE TABLE Beds (
-    Bed_ID INT PRIMARY KEY,
-    Room_ID INT,
-    Floor INT
-);
+    Bed_ID VARCHAR(4) PRIMARY KEY,
+    Room_ID VARCHAR(4),
+	CHECK (Bed_ID LIKE 'B%'),
+	CHECK (Room_ID LIKE 'R%')
+    );
 
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS Patient_Stay;
 SET FOREIGN_KEY_CHECKS = 1;
 CREATE TABLE Patient_Stay (
-    Bed_ID INT,
-    Bill_ID INT PRIMARY KEY,
-    PID VARCHAR(25),
-    CheckIn DATE,
-    CheckOut DATE,
+    Bed_ID VARCHAR(4),
+    Bill_ID INT(5) PRIMARY KEY CHECK (Bill_ID LIKE '66%'),
+    PID VARCHAR(4),
+    CheckIn DATETIME,
+    CheckOut DATETIME,
     FOREIGN KEY (Bed_ID) REFERENCES Beds(Bed_ID),
     FOREIGN KEY (PID) REFERENCES Patients(PID) ON DELETE CASCADE ON UPDATE CASCADE
 );
@@ -107,11 +115,11 @@ DROP TABLE IF EXISTS Billing;
 SET FOREIGN_KEY_CHECKS = 1;
 
 CREATE TABLE Billing (
-    Bill_ID VARCHAR(50),
-    Date_Issued DATE,
-    Total_Amt DECIMAL(10,2),
-    Payment_Status VARCHAR(50),
-    Bed_ID INT,
+    Bill_ID INT(5),
+    Date_Issued DATETIME,
+    Total_Amt DECIMAL(10,0),
+    Payment_Status ENUM('Paid','Unpaid'),
+    Bed_ID VARCHAR(4),
     PID VARCHAR(25),
 	PRIMARY KEY (Bed_ID, PID,Bill_ID),
     FOREIGN KEY (PID) REFERENCES Patients(PID) ON DELETE CASCADE ON UPDATE CASCADE
@@ -123,20 +131,23 @@ DROP TABLE IF EXISTS Med_Rec;
 SET FOREIGN_KEY_CHECKS = 1;
 
 CREATE TABLE Med_Rec (
-    Med_Rec INT PRIMARY KEY,
-    Diagnosis VARCHAR(250),
-    Treatments VARCHAR(250),
+    Med_Rec VARCHAR(5) PRIMARY KEY,
+    Diagnosis VARCHAR(50),
+    Treatments VARCHAR(512),
     Ailment VARCHAR(50),
-    medicine VARCHAR(50)
+	CHECK (Med_Rec LIKE 'MR%')
 );
 
 SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS Patient_Rec;
+DROP TABLE IF EXISTS Patient_Recs;
 SET FOREIGN_KEY_CHECKS = 1;
+CREATE TABLE Patient_Recs (
+	Med_Rec VARCHAR(5),
+    PID VARCHAR(4),
+	PRIMARY KEY (Med_Rec, PID),
+    FOREIGN KEY (PID) REFERENCES Patients(PID) ON DELETE CASCADE ON UPDATE CASCADE,
+	FOREIGN KEY (Med_Rec) REFERENCES Med_Rec(Med_Rec) ON DELETE CASCADE ON UPDATE CASCADE
+    );
 
-CREATE TABLE Patient_Rec (
-    Rec_ID INT,
-    PID VARCHAR(25),
-    PRIMARY KEY (Rec_ID, PID),
-    FOREIGN KEY (PID) REFERENCES Patients(PID) ON DELETE CASCADE ON UPDATE CASCADE
-);
+
+
